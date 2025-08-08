@@ -1,24 +1,19 @@
 from src.rc_digehealth_test.utils import DigeHealthFile
-from src.rc_digehealth_test.preprocessors import WaveletEventDetector, ButterFilter
+from src.rc_digehealth_test.preprocessors import ButterFilter
 import torch
-import torch.nn as nn
 from torch.utils.data import WeightedRandomSampler
-import torch.optim as optim
-from src.rc_digehealth_test.classifiers import PrecomputedMelDataset, BowelSoundCNN, train_model
+from src.rc_digehealth_test.classifiers import BowelSoundCNN, train_model, SegmentDataset
 import matplotlib.pyplot as plt
 import numpy as np
-from torchaudio.transforms import MelSpectrogram
 
 
 # Get the files
-train_file = DigeHealthFile('../test-data/AS_1.wav', decimate_data=False)
+train_file = DigeHealthFile('../test-data/AS_1.wav', decimate_data=True)
 test_file = DigeHealthFile('../test-data/23M74M.wav', decimate_data=True)
 
-# Prepare preprocessors
+# Prepare preprocessor
 fs = train_file.fs
 butter_filter = ButterFilter(cutoff=80, btype='highpass', fs=fs, axis=0)
-mel_spec = MelSpectrogram(sample_rate=fs, n_fft=int(fs*0.05), n_mels=128, hop_length=int(fs*0.005), normalized=True,
-                          center=False)
 
 # Get the preprocessed and segmented data from the files
 seg_train_data, seg_train_labels = train_file.get_segmented_data(segment_size_sec=0.06, filter_to_apply=butter_filter)
@@ -33,25 +28,23 @@ class_sample_counts = np.bincount(train_labels)
 weights = 1. / class_sample_counts
 sample_weights = weights[train_labels]
 
-# Transform into mel spectrograms
-seg_train_data = torch.from_numpy(seg_train_data).float()
-X_train = mel_spec(seg_train_data)
-seg_test_data = torch.from_numpy(seg_test_data).float()
-X_test = mel_spec(seg_test_data)
+# Transform into tensors
+X_train = torch.from_numpy(seg_train_data).float()
+X_test = torch.from_numpy(seg_test_data).float()
 sampler = WeightedRandomSampler(weights=sample_weights,
                                 num_samples=len(sample_weights),
                                 replacement=True)
 # Setup learning loop
 batch_size = 128
-num_epochs = 30
+num_epochs = 100
 learning_rate = 1 # good for adelta
 
-# Prepare loaders
-train_dataset = PrecomputedMelDataset(X_train, train_labels)
-test_dataset = PrecomputedMelDataset(X_test, test_labels)
+# Prepare datasets
+train_dataset = SegmentDataset(X_train, train_labels)
+test_dataset = SegmentDataset(X_test, test_labels)
 
 # Prepare the model
-model = BowelSoundCNN()
+model = BowelSoundCNN(fs=fs)
 
 # Train the model
 train_model(model, train_dataset=train_dataset, val_dataset=test_dataset, epochs=num_epochs,
@@ -59,9 +52,8 @@ train_model(model, train_dataset=train_dataset, val_dataset=test_dataset, epochs
 
 # Test the model on the test set
 model.eval()
-preds = model(X_test[:, None, :, :].to('cuda'))
+preds = model(X_test.to('cuda'))
 preds = torch.argmax(preds, dim=1).cpu().detach().numpy()
-
 
 pred_fixed = preds.copy()
 for i in range(1, len(preds) - 1):

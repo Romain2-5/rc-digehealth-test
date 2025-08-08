@@ -6,11 +6,16 @@ from torch.utils.data import DataLoader
 from torch.nn import CrossEntropyLoss
 from torch.optim import Adadelta
 from tqdm import tqdm
+from torchaudio.transforms import MelSpectrogram
 
 
 class BowelSoundCNN(nn.Module):
-    def __init__(self, num_classes=2, dropout=0.2):
+    def __init__(self, num_classes=2, dropout=0.1, fs=8000):
         super().__init__()
+
+        self.mel_spec = MelSpectrogram(sample_rate=fs, n_fft=int(fs * 0.05), n_mels=128, hop_length=int(fs * 0.005),
+                                  normalized=True,
+                                  center=False)
 
         self.net = nn.Sequential(
 
@@ -29,7 +34,7 @@ class BowelSoundCNN(nn.Module):
             nn.ReLU(),
             nn.MaxPool2d(kernel_size=(2, 1)),  # (B, 64, 16, 3)
 
-            nn.Dropout(dropout),  # p=0.2
+            nn.Dropout(dropout),
             nn.Flatten(),  # (B, 64 * 16 * 3 = 3072)
             nn.Linear(7168, 64),
             nn.ReLU(),
@@ -37,6 +42,10 @@ class BowelSoundCNN(nn.Module):
         )
 
     def forward(self, x):
+
+        x = self.mel_spec(x)
+        x = x.unsqueeze(1)
+
         for layer in self.net:
             x = layer(x)
             # Debug: print intermediate shapes
@@ -45,37 +54,26 @@ class BowelSoundCNN(nn.Module):
         return x
 
 
-class PrecomputedMelDataset(Dataset):
-    def __init__(self, mel_specs, labels):
-        """
-        mel_specs: list or array of precomputed Mel spectrograms,
-                   each of shape (128, 3) or (1, 128, 3)
-        labels: list or array of integer class labels (e.g., 0 = non-BS, 1 = BS)
-
-        All Mel spectrograms must be 2D or 3D and match the model's input shape.
-        """
-        assert len(mel_specs) == len(labels), "Mismatched mel and label lengths"
-        self.mel_specs = mel_specs
+class SegmentDataset(Dataset):
+    def __init__(self, data, labels):
+        assert len(data) == len(labels), "Mismatched mel and label lengths"
+        self.data = data
         self.labels = labels
 
     def __len__(self):
-        return len(self.mel_specs)
+        return len(self.data)
 
-    def __getitem__(self, idx):
-        mel = self.mel_specs[idx]
+    def __getitem__(self, index):
+        x = self.data[index]
+        y = self.labels[index]
 
         # Ensure it's a tensor
-        if not torch.is_tensor(mel):
-            mel = torch.tensor(mel, dtype=torch.float32)
+        if not torch.is_tensor(x):
+            x = torch.tensor(x, dtype=torch.float32)
+        if not torch.is_tensor(y):
+            y = torch.tensor(y, dtype=torch.long)
 
-        # Ensure shape is (1, 128, 3) — channel-first for Conv2D
-        if mel.dim() == 2:
-            mel = mel.unsqueeze(0)  # (1, 128, 3)
-
-        label = self.labels[idx]
-        label = torch.tensor(label, dtype=torch.long)
-
-        return mel, label
+        return x, y
 
 
 def train_model(model, train_dataset, val_dataset=None, epochs=30, batch_size=128, learning_rate=1.0,

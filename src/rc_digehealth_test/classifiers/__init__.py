@@ -1,1 +1,1 @@
-from .conv_model import BowelSoundCNN, PrecomputedMelDataset, train_model
+from .conv_model import BowelSoundCNN, train_model, SegmentDataset

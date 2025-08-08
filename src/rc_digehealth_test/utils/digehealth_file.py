@@ -14,8 +14,8 @@ class DigeHealthFile:
         original_fs, self.raw_data = wavfile.read(digehealth_file_path)
 
         if decimate_data:
-            self.raw_data = decimate(self.raw_data, int(original_fs / 16000))
-            self.fs = 16000
+            self.raw_data = decimate(self.raw_data, int(original_fs / 8000))
+            self.fs = 8000
         else:
             self.fs = original_fs
 
@@ -56,7 +56,7 @@ class DigeHealthFile:
                 ax.axvspan(self.labels.iloc[i]['start'], self.labels.iloc[i]['end'], color=color, alpha=0.2)
         plt.show()
 
-    def get_segmented_data(self, segment_size_sec=0.6, filter_to_apply=None, normalize=True):
+    def get_segmented_data(self, segment_size_sec=0.06, filter_to_apply=None, normalize=True):
         label_map = {'b': 1, 'mb': 2, 'h': 3}
         self.labels['label_num'] = self.labels['label'].map(label_map).fillna(0).astype(int)
 
