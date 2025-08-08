@@ -7,6 +7,7 @@ from torch.nn import CrossEntropyLoss
 from torch.optim import Adadelta
 from tqdm import tqdm
 from torchaudio.transforms import MelSpectrogram
+import copy
 
 
 class BowelSoundCNN(nn.Module):
@@ -77,7 +78,7 @@ class SegmentDataset(Dataset):
 
 
 def train_model(model, train_dataset, val_dataset=None, epochs=30, batch_size=128, learning_rate=1.0,
-                training_sampler=None, device='cuda' if torch.cuda.is_available() else 'cpu'):
+                training_sampler=None, early_stop_n_epochs=10, device='cuda' if torch.cuda.is_available() else 'cpu'):
 
     model = model.to(device)
 
@@ -86,6 +87,10 @@ def train_model(model, train_dataset, val_dataset=None, epochs=30, batch_size=12
 
     criterion = CrossEntropyLoss()
     optimizer = Adadelta(model.parameters(), lr=learning_rate)
+
+    best_val_acc = 0.0
+    best_model_wts = copy.deepcopy(model.state_dict())
+    epochs_without_improvement = 0
 
     for epoch in range(1, epochs + 1):
         model.train()
@@ -125,5 +130,19 @@ def train_model(model, train_dataset, val_dataset=None, epochs=30, batch_size=12
                     val_total += val_labels.size(0)
             val_acc = val_correct / val_total * 100
             print(f"            Validation Accuracy: {val_acc:.2f}%")
+
+            if val_acc > best_val_acc:
+                best_model_wts = copy.deepcopy(model.state_dict())
+                best_val_acc = val_acc
+                epochs_without_improvement = 0
+            else:
+                epochs_without_improvement += 1
+                if early_stop_n_epochs is not None:
+                    if epochs_without_improvement >= early_stop_n_epochs:
+                        print(f"Early stopping triggered after {epoch}. Best val accuracy: {best_val_acc:.2f}%")
+                        break
+
+    if val_loader:
+        model.load_state_dict(best_model_wts)
 
     return model
