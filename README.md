@@ -125,9 +125,9 @@ onnx_program = torch.onnx.export(model.to('cpu'), example_inputs, dynamo=True)
 onnx_program.save("saved_models/BowelSoundCNN.onnx")
 ```
 ---
-## Using the Exported ONNX Model
 
-Once the CNN has been trained and exported to ONNX format, you can load and run inference with [ONNX Runtime](https://onnxruntime.ai/).  
+### Using the Exported ONNX Model
+- Once the CNN has been trained and exported to ONNX format, you can load and run inference with [ONNX Runtime](https://onnxruntime.ai/).  
 An example script is provided in [`load_and_test_cnn.py`](tests/load_and_test_cnn.py).
 ---
 
