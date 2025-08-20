@@ -1,1 +1,2 @@
 from .digehealth_file import DigeHealthFile
+from .signal_functions import find_nonzero_segments, fill_label_gaps

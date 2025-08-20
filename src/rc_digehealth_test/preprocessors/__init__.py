@@ -1,2 +1,2 @@
 from .wavelet_event_detector import WaveletEventDetector, WaveletFilter
-from .filters import ButterFilter
+from .filters import Filter, ButterFilter
