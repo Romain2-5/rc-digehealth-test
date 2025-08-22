@@ -70,7 +70,7 @@ if __name__ == '__main__':
 
     # Fix the prediction by filling gaps (use timing information)
     pred_fixed = preds.copy()
-    pred_fixed = fill_label_gaps(pred_fixed, max_gap=7)
+    pred_fixed = fill_label_gaps(pred_fixed, max_gap=12)  # fill gaps of 2 full windows (120 ms)
 
     # Find the continuous periods to mimic the labelling style of the file
     periods = find_nonzero_segments(pred_fixed)
@@ -81,11 +81,6 @@ if __name__ == '__main__':
             if p[1] - p[0] < 8:
                 p[2] = 0
 
-    # Save the periods in a file with same style as label file
-    label_map = {0: 'b', 1: "mb", 2: 'h'}
-    result = pd.DataFrame(periods, columns=['start', 'stop', 'label'])
-    result['label'] = result['label'].map(label_map)
-    result.to_csv('../test-data/predicted_labels_test_file.txt', index=False)
 
     # Show data, label and classification results
     test_file.show_data(preprocessor=butter_filter)
@@ -98,6 +93,15 @@ if __name__ == '__main__':
     plt.figure()
     sns.heatmap(cm, annot=True, xticklabels=['ŷ no-noise', 'ŷ Burst', 'ŷ Harmonic'],
                 yticklabels=['no-noise', 'Burst', 'Harmonic'])
+
+    # Save the periods in a file with same style as label file
+    periods = np.array(periods).astype(float)
+    label_map = {0: 'b', 1: "mb", 2: 'h'}
+    periods[:, 0] = test_xtime[periods[:, 0].astype(int)]
+    periods[:, 1] = test_xtime[periods[:, 1].astype(int)]
+    result = pd.DataFrame(periods, columns=['start', 'stop', 'label'])
+    result['label'] = result['label'].map(label_map)
+    result.to_csv('../test-data/predicted_labels_test_file.txt', index=False)
 
     # Save model with ONNX
     example_inputs = (torch.randn(1, 480),)
