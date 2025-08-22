@@ -89,11 +89,15 @@ tests/
 ### Install dependencies
 - Development is done with PyCharm and poetry. You can open the project in pycharm and create a poetry venv
 - to test, it's possible to install dependencies with pip
+- The current project will install PyTorch for GPU. You need a graphic card with a working CUDA installation
 ```bash
 poetry install
 # or 
 pip install .
 ```
+
+### Add data files
+- The data files need to go in the test-data folder ```test-data/```. Refer to the README in there.
 
 ### Run training & testing
 The main script (`tests/train_test_cnn.py`) performs:
