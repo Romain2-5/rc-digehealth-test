@@ -58,7 +58,7 @@ if __name__ == '__main__':
     model = BowelSoundCNN(fs=fs, num_classes=3, dropout=0.3)
 
     # Train the model
-    train_model(model, train_dataset=train_dataset, val_dataset=val_dataset, epochs=num_epochs,
+    train_model(model, batch_size=batch_size, train_dataset=train_dataset, val_dataset=val_dataset, epochs=num_epochs,
                 learning_rate=learning_rate, training_sampler=sampler, early_stop_n_epochs=20)
 
     # Test the model on the test set and print classification report
@@ -70,7 +70,8 @@ if __name__ == '__main__':
 
     # Fix the prediction by filling gaps (use timing information)
     pred_fixed = preds.copy()
-    pred_fixed = fill_label_gaps(pred_fixed, max_gap=12)  # fill gaps of 2 full windows (120 ms)
+    pred_fixed = fill_label_gaps(pred_fixed, max_gap=6)  # fill gaps of 1 full windows (60 ms)
+    print(classification_report(Y_test, pred_fixed))
 
     # Find the continuous periods to mimic the labelling style of the file
     periods = find_nonzero_segments(pred_fixed)

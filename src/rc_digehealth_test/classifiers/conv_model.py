@@ -40,23 +40,23 @@ class BowelSoundCNN(nn.Module):
         self.net = nn.Sequential(
 
             # Conv Block 1
-            nn.Conv2d(in_channels=1, out_channels=16, kernel_size=(3, 1), padding=1),  # (B, 16, 128, 3)
+            nn.Conv2d(in_channels=1, out_channels=8, kernel_size=(3, 1), padding=0),
             nn.ReLU(),
-            nn.MaxPool2d(kernel_size=(2, 1)),  # (B, 16, 64, 3)
+            nn.MaxPool2d(kernel_size=(2, 1)),
 
             # Conv Block 2
-            nn.Conv2d(16, 32, kernel_size=(3, 1), padding=1),  # (B, 32, 64, 3)
+            nn.Conv2d(8, 8, kernel_size=(3, 1), padding=0),
             nn.ReLU(),
-            nn.MaxPool2d(kernel_size=(2, 1)),  # (B, 32, 32, 3)
+            # nn.MaxPool2d(kernel_size=(2, 1)),
 
             # Conv Block 3
-            nn.Conv2d(32, 64, kernel_size=(3, 3), padding=1),  # (B, 64, 32, 3)
+            nn.Conv2d(8, 16, kernel_size=(3, 3), padding=0),
             nn.ReLU(),
-            nn.MaxPool2d(kernel_size=(2, 1)),  # (B, 64, 16, 3)
+            # nn.MaxPool2d(kernel_size=(2, 1)),
 
             nn.Dropout(dropout),
-            nn.Flatten(),  # (B, 64 * 16 * 3 = 3072)
-            nn.Linear(7168, 64),
+            nn.Flatten(),
+            nn.Linear(944, 64),
             nn.ReLU(),
             nn.Linear(64, num_classes)  # Output: (B, num_classes)
         )
@@ -69,11 +69,15 @@ class BowelSoundCNN(nn.Module):
             torch.Tensor: Output logits of shape (batch_size, num_classes).
         """
 
+        # print('NEW RUN')
+        # print(f'INPUT: {x.shape}')
         x = self.mel_spec(x)
+        # print(f'INPUT after mel: {x.shape}')
         x = x.unsqueeze(1)  # Add channel dimension
 
         for layer in self.net:
             x = layer(x)
+            # print(f'Output from layer {layer}: {x.shape}')
             # Debug: print intermediate shapes
             # if isinstance(layer, nn.Flatten):
             #     print(f"after Flatten: {x.shape}")
